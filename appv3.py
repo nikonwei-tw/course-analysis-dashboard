@@ -49,7 +49,7 @@ try:
     if df is not None:
         st.title("🎓 跨學年課程數據分析平台")
 
-        # --- 側邊欄：全方塊化篩選區 ---
+        # --- 側邊欄：方塊化篩選區 ---
         st.sidebar.header("🔧 篩選工具箱")
         
         st.sidebar.write("##### 學年度")
@@ -87,53 +87,55 @@ try:
         if search_keyword:
             f_df = f_df[f_df['主開科目名稱'].str.contains(search_keyword, na=False, case=False)]
 
-        # --- 數據呈現區 ---
+        # --- 數據計算 ---
         unique_courses_df = f_df.drop_duplicates(subset=['學年度', '學期', '主開課程碼'])
         total_unique = len(unique_courses_df)
         
         st.divider()
         st.metric("當前條件下總開課數", f"{total_unique} 門")
 
-        # --- 圖表區 (改為兩列顯示三圖) ---
+        # --- 圖表區 (2x2 佈局) ---
         if not unique_courses_df.empty:
-            # 第一列：趨勢圖與學院圓餅圖
+            # 第一列
             row1_col1, row1_col2 = st.columns([1, 1])
             
             with row1_col1:
-                st.subheader("📅 歷年開課趨勢比較")
+                st.subheader("📅 各學期開課數量 (長條圖)")
                 stats_trend = unique_courses_df.groupby(['學年度', '學期']).size().reset_index(name='課程數')
                 stats_trend['學期別'] = stats_trend['學年度'] + "-" + stats_trend['學期']
-                fig_trend = px.line(stats_trend, x='學期別', y='課程數', markers=True, text='課程數')
-                st.plotly_chart(fig_trend, use_container_width=True)
+                # 使用長條圖呈現學期數據
+                fig_trend_bar = px.bar(stats_trend, x='學期別', y='課程數', color='學年度', 
+                                       text='課程數', barmode='group',
+                                       color_discrete_sequence=px.colors.qualitative.Set2)
+                st.plotly_chart(fig_trend_bar, use_container_width=True)
 
             with row1_col2:
-                st.subheader("🏛️ 各學院開課佔比")
+                st.subheader("🏛️ 各學院開課比例")
                 stats_college = unique_courses_df.groupby('主開學院名稱_中文').size().reset_index(name='課程數')
-                fig_pie = px.pie(stats_college, values='課程數', names='主開學院名稱_中文', hole=0.4,
-                                 color_discrete_sequence=px.colors.qualitative.Pastel)
+                fig_pie = px.pie(stats_college, values='課程數', names='主開學院名稱_中文', hole=0.4)
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-            # 第二列：學院長條圖與系所 Top 15
+            # 第二列
             row2_col1, row2_col2 = st.columns([1, 1])
             
             with row2_col1:
-                st.subheader("📊 各學院開課數量")
+                st.subheader("📊 學院開課排行")
                 stats_college_bar = stats_college.sort_values('課程數', ascending=True)
-                fig_col_bar = px.bar(stats_college_bar, y='主開學院名稱_中文', x='課程數', 
-                                     orientation='h', text='課程數', color='課程數',
-                                     color_continuous_scale='Blues')
-                st.plotly_chart(fig_col_bar, use_container_width=True)
+                fig_col_h = px.bar(stats_college_bar, y='主開學院名稱_中文', x='課程數', 
+                                   orientation='h', text='課程數', color='課程數',
+                                   color_continuous_scale='GnBu')
+                st.plotly_chart(fig_col_h, use_container_width=True)
 
             with row2_col2:
                 st.subheader("🏫 系所開課 Top 15")
                 stats_dept = unique_courses_df.groupby('主開系所名稱_中文').size().reset_index(name='課程數')
                 stats_dept = stats_dept.sort_values('課程數', ascending=False).head(15)
-                fig_dept_bar = px.bar(stats_dept, x='課程數', y='主開系所名稱_中文', 
-                                      orientation='h', text='課程數',
-                                      color_discrete_sequence=['#FFA15A'])
-                st.plotly_chart(fig_dept_bar, use_container_width=True)
+                fig_dept_h = px.bar(stats_dept, x='課程數', y='主開系所名稱_中文', 
+                                    orientation='h', text='課程數',
+                                    color_discrete_sequence=['#636EFA'])
+                st.plotly_chart(fig_dept_h, use_container_width=True)
         else:
-            st.info("請選擇篩選條件以顯示圖表")
+            st.info("請選擇篩選條件以顯示數據圖表")
 
         st.divider()
         st.subheader("📋 課程詳細清單")
